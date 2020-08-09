@@ -38,8 +38,7 @@ foreach(target MyGame ${BIN_TARGET})
     target_compile_definitions(${target} PRIVATE USE_SDL1)
   else()
     target_link_libraries(${target} PRIVATE
-      SDL2::SDL2main
-	  SDL2::SDL2_image)
+		SDL2::SDL2main)
   endif()
 
   target_compile_definitions(${target} PRIVATE ${def_list})
