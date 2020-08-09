@@ -1,100 +1,197 @@
-# Locate SDL_image library
+# - Find SDL2_image
+# Find the SDL2 headers and libraries
 #
-# This module defines:
+#  SDL2::SDL2_image - Imported target
 #
-# ::
+#  SDL2_image_FOUND - True if SDL2_image was found.
+#  SDL2_image_DYNAMIC - If we found a DLL version of SDL2_image
 #
-#   SDL2_IMAGE_LIBRARIES, the name of the library to link against
-#   SDL2_IMAGE_INCLUDE_DIRS, where to find the headers
-#   SDL2_IMAGE_FOUND, if false, do not try to link against
-#   SDL2_IMAGE_VERSION_STRING - human-readable string containing the version of SDL_image
+# Modified for SDL2_image of FindSDL2.cmake
+# Original Author:
+# 2015 Ryan Pavlik <ryan.pavlik@gmail.com> <abiryan@ryand.net>
 #
-#
-#
-# For backward compatibility the following variables are also set:
-#
-# ::
-#
-#   SDLIMAGE_LIBRARY (same value as SDL2_IMAGE_LIBRARIES)
-#   SDLIMAGE_INCLUDE_DIR (same value as SDL2_IMAGE_INCLUDE_DIRS)
-#   SDLIMAGE_FOUND (same value as SDL2_IMAGE_FOUND)
-#
-#
-#
-# $SDLDIR is an environment variable that would correspond to the
-# ./configure --prefix=$SDLDIR used in building SDL.
-#
-# Created by Eric Wing.  This was influenced by the FindSDL.cmake
-# module, but with modifications to recognize OS X frameworks and
-# additional Unix paths (FreeBSD, etc).
+# Copyright Sensics, Inc. 2015.
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
 
-#=============================================================================
-# Copyright 2005-2009 Kitware, Inc.
-# Copyright 2012 Benjamin Eikel
-#
-# Distributed under the OSI-approved BSD License (the "License");
-# see accompanying file Copyright.txt for details.
-#
-# This software is distributed WITHOUT ANY WARRANTY; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the License for more information.
-#=============================================================================
-# (To distribute this file outside of CMake, substitute the full
-#  License text for the above reference.)
-
-find_path(SDL2_IMAGE_INCLUDE_DIR SDL_image.h
-        HINTS
-        ENV SDL2IMAGEDIR
-        ENV SDL2DIR
-        PATH_SUFFIXES SDL2
-        # path suffixes to search inside ENV{SDLDIR}
-        include/SDL2 include
-        PATHS ${SDL2_IMAGE_PATH}
-        )
-
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(VC_LIB_PATH_SUFFIX lib/x64)
-else()
-    set(VC_LIB_PATH_SUFFIX lib/x86)
+# Set up architectures (for windows) and prefixes (for mingw builds)
+if(WIN32)
+	if(MINGW)
+		include(MinGWSearchPathExtras OPTIONAL)
+		if(MINGWSEARCH_TARGET_TRIPLE)
+			set(SDL2_image_PREFIX ${MINGWSEARCH_TARGET_TRIPLE})
+		endif()
+	endif()
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(SDL2_image_LIB_PATH_SUFFIX lib/x64)
+		if(NOT MSVC AND NOT SDL2_image_PREFIX)
+			set(SDL2_image_PREFIX x86_64-w64-mingw32)
+		endif()
+	else()
+		set(SDL2_image_LIB_PATH_SUFFIX lib/x86)
+		if(NOT MSVC AND NOT SDL2_image_PREFIX)
+			set(SDL2_image_PREFIX i686-w64-mingw32)
+		endif()
+	endif()
 endif()
 
-find_library(SDL2_IMAGE_LIBRARY
-        NAMES SDL2_image
-        HINTS
-        ENV SDL2IMAGEDIR
-        ENV SDL2DIR
-        PATH_SUFFIXES lib ${VC_LIB_PATH_SUFFIX}
-        PATHS ${SDL2_IMAGE_PATH}
-        )
-
-if(SDL2_IMAGE_INCLUDE_DIR AND EXISTS "${SDL2_IMAGE_INCLUDE_DIR}/SDL_image.h")
-    file(STRINGS "${SDL2_IMAGE_INCLUDE_DIR}/SDL_image.h" SDL2_IMAGE_VERSION_MAJOR_LINE REGEX "^#define[ \t]+SDL_IMAGE_MAJOR_VERSION[ \t]+[0-9]+$")
-    file(STRINGS "${SDL2_IMAGE_INCLUDE_DIR}/SDL_image.h" SDL2_IMAGE_VERSION_MINOR_LINE REGEX "^#define[ \t]+SDL_IMAGE_MINOR_VERSION[ \t]+[0-9]+$")
-    file(STRINGS "${SDL2_IMAGE_INCLUDE_DIR}/SDL_image.h" SDL2_IMAGE_VERSION_PATCH_LINE REGEX "^#define[ \t]+SDL_IMAGE_PATCHLEVEL[ \t]+[0-9]+$")
-    string(REGEX REPLACE "^#define[ \t]+SDL_IMAGE_MAJOR_VERSION[ \t]+([0-9]+)$" "\\1" SDL2_IMAGE_VERSION_MAJOR "${SDL2_IMAGE_VERSION_MAJOR_LINE}")
-    string(REGEX REPLACE "^#define[ \t]+SDL_IMAGE_MINOR_VERSION[ \t]+([0-9]+)$" "\\1" SDL2_IMAGE_VERSION_MINOR "${SDL2_IMAGE_VERSION_MINOR_LINE}")
-    string(REGEX REPLACE "^#define[ \t]+SDL_IMAGE_PATCHLEVEL[ \t]+([0-9]+)$" "\\1" SDL2_IMAGE_VERSION_PATCH "${SDL2_IMAGE_VERSION_PATCH_LINE}")
-    set(SDL2_IMAGE_VERSION_STRING ${SDL2_IMAGE_VERSION_MAJOR}.${SDL2_IMAGE_VERSION_MINOR}.${SDL2_IMAGE_VERSION_PATCH})
-    unset(SDL2_IMAGE_VERSION_MAJOR_LINE)
-    unset(SDL2_IMAGE_VERSION_MINOR_LINE)
-    unset(SDL2_IMAGE_VERSION_PATCH_LINE)
-    unset(SDL2_IMAGE_VERSION_MAJOR)
-    unset(SDL2_IMAGE_VERSION_MINOR)
-    unset(SDL2_IMAGE_VERSION_PATCH)
+if(SDL2_image_PREFIX)
+	set(SDL2_image_ORIGPREFIXPATH ${CMAKE_PREFIX_PATH})
+	if(SDL2_image_ROOT_DIR)
+		list(APPEND CMAKE_PREFIX_PATH "${SDL2_image_ROOT_DIR}")
+	endif()
+	if(CMAKE_PREFIX_PATH)
+		foreach(_prefix ${CMAKE_PREFIX_PATH})
+			list(APPEND CMAKE_PREFIX_PATH "${_prefix}/${SDL2_image_PREFIX}")
+		endforeach()
+	endif()
+	if(MINGWSEARCH_PREFIXES)
+		list(APPEND CMAKE_PREFIX_PATH ${MINGWSEARCH_PREFIXES})
+	endif()
 endif()
 
-set(SDL2_IMAGE_LIBRARIES ${SDL2_IMAGE_LIBRARY})
-set(SDL2_IMAGE_INCLUDE_DIRS ${SDL2_IMAGE_INCLUDE_DIR})
+# Invoke pkgconfig for hints
+find_package(PkgConfig QUIET)
+set(SDL2_image_INCLUDE_HINTS)
+set(SDL2_image_LIB_HINTS)
+if(PKG_CONFIG_FOUND)
+	pkg_search_module(SDL2_imagePC QUIET SDL2_image)
+	if(SDL2_imagePC_INCLUDE_DIRS)
+		set(SDL2_image_INCLUDE_HINTS ${SDL2_imagePC_INCLUDE_DIRS})
+	endif()
+	if(SDL2_imagePC_LIBRARY_DIRS)
+		set(SDL2_image_LIB_HINTS ${SDL2_imagePC_LIBRARY_DIRS})
+	endif()
+endif()
 
 include(FindPackageHandleStandardArgs)
 
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(SDL2_image
-        REQUIRED_VARS SDL2_IMAGE_LIBRARIES SDL2_IMAGE_INCLUDE_DIRS
-        VERSION_VAR SDL2_IMAGE_VERSION_STRING)
+find_library(SDL2_image_LIBRARY
+	NAMES
+	SDL2_image
+	HINTS
+	${SDL2_image_LIB_HINTS}
+	PATHS
+	${SDL2_image_ROOT_DIR}
+	ENV SDL2DIR
+	PATH_SUFFIXES lib SDL2 ${SDL2_image_LIB_PATH_SUFFIX})
 
-# for backward compatibility
-set(SDLIMAGE_LIBRARY ${SDL2_IMAGE_LIBRARIES})
-set(SDLIMAGE_INCLUDE_DIR ${SDL2_IMAGE_INCLUDE_DIRS})
-set(SDLIMAGE_FOUND ${SDL2_IMAGE_FOUND})
+set(_sdl2_framework FALSE)
+# Some special-casing if we've found/been given a framework.
+# Handles whether we're given the library inside the framework or the framework itself.
+if(APPLE AND "${SDL2_image_LIBRARY}" MATCHES "(/[^/]+)*.framework(/.*)?$")
+	set(_sdl2_framework TRUE)
+	set(SDL2_image_FRAMEWORK "${SDL2_image_LIBRARY}")
+	# Move up in the directory tree as required to get the framework directory.
+	while("${SDL2_image_FRAMEWORK}" MATCHES "(/[^/]+)*.framework(/.*)$" AND NOT "${SDL2_image_FRAMEWORK}" MATCHES "(/[^/]+)*.framework$")
+		get_filename_component(SDL2_image_FRAMEWORK "${SDL2_image_FRAMEWORK}" DIRECTORY)
+	endwhile()
+	if("${SDL2_image_FRAMEWORK}" MATCHES "(/[^/]+)*.framework$")
+		set(SDL2_image_FRAMEWORK_NAME ${CMAKE_MATCH_1})
+		# If we found a framework, do a search for the header ahead of time that will be more likely to get the framework header.
+		find_path(SDL2_image_INCLUDE_DIR
+			NAMES
+			SDL_mixer.h 
+			HINTS
+			"${SDL2_image_FRAMEWORK}/Headers/")
+	else()
+		# For some reason we couldn't get the framework directory itself.
+		# Shouldn't happen, but might if something is weird.
+		unset(SDL2_image_FRAMEWORK)
+	endif()
+endif()
 
-mark_as_advanced(SDL2_IMAGE_LIBRARY SDL2_IMAGE_INCLUDE_DIR)
+find_path(SDL2_image_INCLUDE_DIR
+	NAMES
+	SDL_mixer.h 
+	HINTS
+	${SDL2_image_INCLUDE_HINTS}
+	PATHS
+	${SDL2_image_ROOT_DIR}
+	ENV SDL2DIR
+	PATH_SUFFIXES include include/sdl2 include/SDL2 SDL2)
+
+if(WIN32 AND SDL2_image_LIBRARY)
+	find_file(SDL2_image_RUNTIME_LIBRARY
+		NAMES
+		SDL2_image.dll
+		libSDL2_image.dll
+		HINTS
+		${SDL2_image_LIB_HINTS}
+		PATHS
+		${SDL2_image_ROOT_DIR}
+		ENV SDL2DIR
+		PATH_SUFFIXES bin lib ${SDL2_image_LIB_PATH_SUFFIX})
+endif()
+
+if(MINGW AND NOT SDL2_imagePC_FOUND)
+	find_library(SDL2_image_MINGW_LIBRARY mingw32)
+	find_library(SDL2_image_MWINDOWS_LIBRARY mwindows)
+endif()
+
+if(SDL2_image_PREFIX)
+	# Restore things the way they used to be.
+	set(CMAKE_PREFIX_PATH ${SDL2_image_ORIGPREFIXPATH})
+endif()
+
+# handle the QUIETLY and REQUIRED arguments and set QUATLIB_FOUND to TRUE if
+# all listed variables are TRUE
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(SDL2_image
+	DEFAULT_MSG
+	SDL2_image_LIBRARY
+	SDL2_image_INCLUDE_DIR
+	${SDL2_image_EXTRA_REQUIRED})
+
+if(SDL2_image_FOUND)
+	if(NOT TARGET SDL2::SDL2_image)
+		# Create SDL2::SDL2_image
+		if(WIN32 AND SDL2_image_RUNTIME_LIBRARY)
+			set(SDL2_image_DYNAMIC TRUE)
+			add_library(SDL2::SDL2_image SHARED IMPORTED)
+			set_target_properties(SDL2::SDL2_image
+				PROPERTIES
+				IMPORTED_IMPLIB "${SDL2_image_LIBRARY}"
+				IMPORTED_LOCATION "${SDL2_image_RUNTIME_LIBRARY}"
+				INTERFACE_INCLUDE_DIRECTORIES "${SDL2_image_INCLUDE_DIR}"
+			)
+		else()
+			add_library(SDL2::SDL2_image UNKNOWN IMPORTED)
+			if(SDL2_image_FRAMEWORK AND SDL2_image_FRAMEWORK_NAME)
+				# Handle the case that SDL2_image is a framework and we were able to decompose it above.
+				set_target_properties(SDL2::SDL2_image PROPERTIES
+					IMPORTED_LOCATION "${SDL2_image_FRAMEWORK}/${SDL2_image_FRAMEWORK_NAME}")
+			elseif(_sdl2_framework AND SDL2_image_LIBRARY MATCHES "(/[^/]+)*.framework$")
+				# Handle the case that SDL2_image is a framework and SDL_LIBRARY is just the framework itself.
+
+				# This takes the basename of the framework, without the extension,
+				# and sets it (as a child of the framework) as the imported location for the target.
+				# This is the library symlink inside of the framework.
+				set_target_properties(SDL2::SDL2_image PROPERTIES
+					IMPORTED_LOCATION "${SDL2_image_LIBRARY}/${CMAKE_MATCH_1}")
+			else()
+				# Handle non-frameworks (including non-Mac), as well as the case that we're given the library inside of the framework
+				set_target_properties(SDL2::SDL2_image PROPERTIES
+					IMPORTED_LOCATION "${SDL2_image_LIBRARY}")
+			endif()
+			set_target_properties(SDL2::SDL2_image
+				PROPERTIES
+				INTERFACE_INCLUDE_DIRECTORIES "${SDL2_image_INCLUDE_DIR}"
+			)
+		endif()
+	endif()
+	mark_as_advanced(SDL2_image_ROOT_DIR)
+endif()
+
+mark_as_advanced(SDL2_image_LIBRARY
+	SDL2_image_RUNTIME_LIBRARY
+	SDL2_image_INCLUDE_DIR
+	SDL2_image_SDLMAIN_LIBRARY
+	SDL2_image_COCOA_LIBRARY
+	SDL2_image_MINGW_LIBRARY
+	SDL2_image_MWINDOWS_LIBRARY)
+
+find_package(SDL2 REQUIRED)
+set_property(TARGET SDL2::SDL2_image APPEND PROPERTY
+	INTERFACE_LINK_LIBRARIES SDL2::SDL2)
