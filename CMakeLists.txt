@@ -12,7 +12,7 @@ if(NOT VERSION_NUM)
   get_git_tag(VERSION_NUM)
   get_git_commit_hash(GIT_COMMIT_HASH)
   if(NOT VERSION_SUFFIX)
-    set(VERSION_SUFFIX "$<$<NOT:$<CONFIG:Release>>:-${GIT_COMMIT_HASH}>")
+	set(VERSION_SUFFIX "$<$<NOT:$<CONFIG:Release>>:-${GIT_COMMIT_HASH}>")
   endif()
 endif()
 
@@ -23,11 +23,11 @@ endif()
 
 if(VERSION_NUM MATCHES untagged)
   project(MyGame
-    LANGUAGES C CXX)
+	LANGUAGES C CXX)
 else()
   project(MyGame
-    VERSION ${VERSION_NUM}
-    LANGUAGES C CXX)
+	VERSION ${VERSION_NUM}
+	LANGUAGES C CXX)
 endif()
 
 set(CMAKE_CXX_STANDARD 11)
@@ -37,18 +37,22 @@ set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
   if (NOT SDL2_FOUND)
-    find_package(SDL2 REQUIRED)
+	find_package(SDL2 REQUIRED)
   endif()
 
   if (NOT SDL2_IMAGE_FOUND)
-    find_package(SDL2_image REQUIRED)
+	find_package(SDL2_image REQUIRED)
   endif()
 
 set(MyGame_SRCS
-  src/main.cpp)
+  src/Game.cpp
+  src/Game.h
+  src/Main.cpp
+  src/Source.cpp  
+  )
 
 set(BIN_TARGET MyGame)
-add_executable(${BIN_TARGET} WIN32 ${MyGame_SRCS})
+add_executable(${BIN_TARGET} WIN32 X64 ${MyGame_SRCS})
 
 # Use file GENERATE instead of configure_file because configure_file
 # does not support generator expressions.
@@ -68,6 +72,9 @@ file(GENERATE OUTPUT ${CONFIG_PATH} CONTENT
   set(TARGET_PLATFORM host CACHE STRING "Target platform")
 set_property(CACHE TARGET_PLATFORM PROPERTY STRINGS host)
 
+target_include_directories(${BIN_TARGET} PRIVATE
+  src)
+
 genex_for_option(DEBUG)
 genex_for_option(ASAN)
 genex_for_option(UBSAN)
@@ -77,12 +84,12 @@ foreach(target MyGame ${BIN_TARGET})
   target_compile_options(${target} PUBLIC $<${UBSAN_GENEX}:-fsanitize=undefined>)
   target_link_libraries(${target} PUBLIC $<${UBSAN_GENEX}:-fsanitize=undefined>)
 
-    target_link_libraries(${target} PRIVATE
+	target_link_libraries(${target} PRIVATE
 		SDL2::SDL2main
 		SDL2::SDL2_image)		
 
   target_compile_definitions(${target} PRIVATE ${def_list})
 endforeach(target)
-
+  
 # Create the source groups for source tree with root at CMAKE_CURRENT_SOURCE_DIR.
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${MyGame_SRCS})
