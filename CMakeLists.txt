@@ -36,6 +36,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
+find_package(SDL2 CONFIG QUIET)
   if (NOT SDL2_FOUND)
 	find_package(SDL2 REQUIRED)
   endif()
@@ -52,7 +53,7 @@ set(MyGame_SRCS
   )
 
 set(BIN_TARGET MyGame)
-add_executable(${BIN_TARGET} WIN32 X64 ${MyGame_SRCS})
+add_executable(${BIN_TARGET} WIN32 ${MyGame_SRCS})
 
 # Use file GENERATE instead of configure_file because configure_file
 # does not support generator expressions.
@@ -75,21 +76,17 @@ set_property(CACHE TARGET_PLATFORM PROPERTY STRINGS host)
 target_include_directories(${BIN_TARGET} PRIVATE
   src)
 
-genex_for_option(DEBUG)
-genex_for_option(ASAN)
-genex_for_option(UBSAN)
 foreach(target MyGame ${BIN_TARGET})
-  target_compile_options(${target} PUBLIC "$<${ASAN_GENEX}:-fsanitize=address;-fsanitize-recover=address>")
-  target_link_libraries(${target} PUBLIC "$<${ASAN_GENEX}:-fsanitize=address;-fsanitize-recover=address>")
-  target_compile_options(${target} PUBLIC $<${UBSAN_GENEX}:-fsanitize=undefined>)
-  target_link_libraries(${target} PUBLIC $<${UBSAN_GENEX}:-fsanitize=undefined>)
-
 	target_link_libraries(${target} PRIVATE
 		SDL2::SDL2main
 		SDL2::SDL2_image)		
-
-  target_compile_definitions(${target} PRIVATE ${def_list})
 endforeach(target)
   
 # Create the source groups for source tree with root at CMAKE_CURRENT_SOURCE_DIR.
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${MyGame_SRCS})
+# source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${MyGame_SRCS})
+
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT MyGame)
+
+set_target_properties(${MyGame} PROPERTIES
+LINK_FLAGS /SUBSYSTEM:WINDOWS
+)
